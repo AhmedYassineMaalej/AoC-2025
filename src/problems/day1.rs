@@ -45,6 +45,7 @@ impl Dial {
         Self { pointed_number }
     }
 
+    // returns the number of times the dial points at 0 during the move
     fn apply_move(&mut self, m: &Move) -> usize {
         let prev = self.pointed_number;
         match m.direction {
