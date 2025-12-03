@@ -9,7 +9,7 @@ impl From<char> for Direction {
         match value {
             'R' => Self::Right,
             'L' => Self::Left,
-            _ => panic!("No direction matching: {}", value),
+            _ => panic!("No direction matching: {value}"),
         }
     }
 }
@@ -100,4 +100,3 @@ pub fn part2(input: &str) -> usize {
 
     count
 }
-

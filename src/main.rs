@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+
 mod problems;
 
 fn main() {
@@ -9,5 +11,5 @@ fn main() {
 
     let duration = start.elapsed();
 
-    println!("answer: {}\nduration: {:?}", result, duration);
+    println!("answer: {result}\nduration: {duration:?}");
 }
