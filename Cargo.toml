@@ -2,3 +2,6 @@
 name = "AoC-2025"
 version = "0.1.0"
 edition = "2024"
+
+[dependencies]
+fxhash = "0.2.1"
