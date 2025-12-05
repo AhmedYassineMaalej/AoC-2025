@@ -65,7 +65,7 @@ impl Dial {
 
         self.pointed_number = self.pointed_number.rem_euclid(100);
 
-        zero_passes as usize
+        usize::try_from(zero_passes).unwrap()
     }
 }
 

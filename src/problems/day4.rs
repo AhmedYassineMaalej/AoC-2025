@@ -54,6 +54,7 @@ fn increment_neighbours(grid: &mut [Vec<u8>], row: usize, col: usize) {
     }
 }
 
+#[allow(unused)]
 pub fn part2(input: &str) -> usize {
     let mut grid: Vec<Vec<u8>> = input.lines().map(|line| line.bytes().collect()).collect();
 

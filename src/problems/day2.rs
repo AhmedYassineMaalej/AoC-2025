@@ -1,6 +1,6 @@
-use std::{collections::HashSet, ops::RangeInclusive};
+use std::collections::HashSet;
 
-use fxhash::{FxBuildHasher, FxHashSet, FxHasher64};
+use fxhash::FxBuildHasher;
 
 #[allow(unused)]
 pub fn part1(input: &str) -> u64 {
@@ -56,7 +56,7 @@ fn sum_invalid_ids_p1(start: u64, end: u64) -> u64 {
 
 // credit to Andrew Tweddle
 // https://github.com/AndrewTweddle/CodingExercises/blob/master/AdventOfCode/aoc2025_rs/src/bin/day2_part1_shorter.rs
-
+#[allow(unused)]
 pub fn part2(input: &str) -> u64 {
     let mut invalid_ids = HashSet::with_capacity_and_hasher(1000, FxBuildHasher::default());
 
@@ -64,7 +64,7 @@ pub fn part2(input: &str) -> u64 {
         let (start, end) = range.split_once('-').unwrap();
         let start = start.parse::<u64>().unwrap();
         let end = end.parse::<u64>().unwrap();
-        insert_invalid_ids(&mut invalid_ids, start, end)
+        insert_invalid_ids(&mut invalid_ids, start, end);
     });
 
     invalid_ids.iter().sum::<u64>()
@@ -91,7 +91,7 @@ fn insert_invalid_ids_with_digit_count(
     // `digit_count` digits by to repeat it enough times
     // so that it covers all the digits of `start`.
     let mut repeater = 1;
-    let first_pow_10 = 10_u64.pow(digit_count as u32);
+    let first_pow_10 = 10_u64.pow(u32::try_from(digit_count).unwrap());
 
     // Find the power of 10 that extracts the last set
     // of up to `digit_count` digits from `start`
