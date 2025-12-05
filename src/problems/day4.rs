@@ -1,47 +1,41 @@
-use std::collections::HashSet;
+fn iter_neighbours(row: usize, col: usize) -> impl Iterator<Item = (usize, usize)> {
+    let neighbours = [
+        (row.wrapping_sub(1), col.wrapping_sub(1)),
+        (row.wrapping_sub(1), col),
+        (row.wrapping_sub(1), col + 1),
+        (row, col.wrapping_sub(1)),
+        (row, col),
+        (row, col + 1),
+        (row + 1, col.wrapping_sub(1)),
+        (row + 1, col),
+        (row + 1, col + 1),
+    ];
 
-fn count_neighbouring_rolls(grid: &Vec<Vec<bool>>, row: usize, col: usize) -> usize {
-    let rows = grid.len();
-    let cols = grid[0].len();
-
-    let mut count = 0;
-
-    for r in row.saturating_sub(1)..(row + 2).min(rows) {
-        for c in col.saturating_sub(1)..(col + 2).min(cols) {
-            if grid[r][c] {
-                count += 1;
-            }
-        }
-    }
-
-    count
+    neighbours.into_iter()
 }
 
+#[allow(unused)]
 pub fn part1(input: &str) -> usize {
-    let grid: Vec<Vec<bool>> = input
-        .lines()
-        .map(|line| line.chars().map(|c| c == '@').collect())
-        .collect();
+    let grid: Vec<&[u8]> = input.lines().map(str::as_bytes).collect();
 
-    let rows = grid.len();
-    let cols = grid[0].len();
-
-    let mut neighbour_grid = vec![vec![0u8; cols]; rows];
-
-    for row in 0..rows {
-        for col in 0..cols {
-            if !grid[row][col] {
+    let mut count = 0;
+    for (row_idx, row) in grid.iter().enumerate() {
+        for (col_idx, cell) in row.iter().enumerate() {
+            if cell == &b'.' {
                 continue;
             }
 
-            increment_neighbours(&mut neighbour_grid, row, col);
-        }
-    }
+            let mut neighbour_count = 0;
+            for (n_row, n_col) in iter_neighbours(row_idx, col_idx) {
+                if let Some(row) = grid.get(n_row)
+                    && let Some(cell) = row.get(n_col)
+                    && cell == &b'@'
+                {
+                    neighbour_count += 1;
+                }
+            }
 
-    let mut count = 0;
-    for row in 0..rows {
-        for col in 0..cols {
-            if grid[row][col] && neighbour_grid[row][col] < 4 {
+            if neighbour_count < 5 {
                 count += 1;
             }
         }
@@ -50,80 +44,56 @@ pub fn part1(input: &str) -> usize {
     count
 }
 
-fn iter_neighbours(
-    row: usize,
-    col: usize,
-    rows: usize,
-    cols: usize,
-) -> impl Iterator<Item = (usize, usize)> {
-    (row.saturating_sub(1)..(row + 2).min(rows)).flat_map(move |row| {
-        (col.saturating_sub(1)..(col + 2).min(cols)).map(move |col| (row, col))
-    })
-}
-
-fn increment_neighbours(grid: &mut Vec<Vec<u8>>, row: usize, col: usize) {
-    let rows = grid.len();
-    let cols = grid[0].len();
-
-    for (r, c) in iter_neighbours(row, col, rows, cols) {
-        if r == row && c == col {
-            continue;
+fn increment_neighbours(grid: &mut [Vec<u8>], row: usize, col: usize) {
+    for (r, c) in iter_neighbours(row, col) {
+        if let Some(row) = grid.get_mut(r)
+            && let Some(cell) = row.get_mut(c)
+        {
+            *cell += 1;
         }
-
-        grid[r][c] += 1;
     }
 }
 
-// make empty set for visited
-// make a queue for cells to check
-// while queue is not empty
-//   if cell removed {
-//      skip
-//   }
-//
-//   cell = queue.pop()
-//   if can remove cell {
-//      decrement neighbouring cell neighbour count
-//      add cell to removed cells
-//      add neighbours to check
-//   }
-
 pub fn part2(input: &str) -> usize {
-    let mut grid: Vec<Vec<bool>> = input
-        .lines()
-        .map(|line| line.chars().map(|c| c == '@').collect())
-        .collect();
+    let mut grid: Vec<Vec<u8>> = input.lines().map(|line| line.bytes().collect()).collect();
 
     let rows = grid.len();
     let cols = grid[0].len();
 
     let mut neighbours_count = vec![vec![0; cols]; rows];
+
     let mut to_check: Vec<(usize, usize)> = Vec::new();
-    for row in 0..rows {
-        for col in 0..cols {
-            if grid[row][col] {
-                increment_neighbours(&mut neighbours_count, row, col);
-                to_check.push((row, col));
+    for (row_idx, row) in grid.iter().enumerate() {
+        for (col_idx, cell) in row.iter().enumerate() {
+            if cell == &b'@' {
+                increment_neighbours(&mut neighbours_count, row_idx, col_idx);
+                to_check.push((row_idx, col_idx));
             }
         }
     }
 
     let mut count = 0;
     while let Some((row, col)) = to_check.pop() {
-        if !grid[row][col] {
+        if grid[row][col] == b'.' {
             // cell does not contain paper roll
             continue;
         }
 
-        // check if roll can be removed
-        if neighbours_count[row][col] < 4 {
-            count += 1;
+        if neighbours_count[row][col] >= 5 {
+            // roll on cell cannot be removed
+            continue;
+        }
 
-            // remove roll
-            grid[row][col] = false;
+        // remove roll
+        grid[row][col] = b'.';
+        count += 1;
 
-            // decrement neighbours and check if they can be removed
-            for (n_row, n_col) in iter_neighbours(row, col, rows, cols) {
+        // decrement neighbours and check if they can be removed
+        for (n_row, n_col) in iter_neighbours(row, col) {
+            if let Some(row) = grid.get(n_row)
+                && let Some(cell) = row.get(n_col)
+                && cell == &b'@'
+            {
                 neighbours_count[n_row][n_col] = neighbours_count[n_row][n_col].saturating_sub(1);
                 to_check.push((n_row, n_col));
             }
