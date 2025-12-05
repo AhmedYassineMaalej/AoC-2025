@@ -65,10 +65,12 @@ pub fn part2(input: &str) -> usize {
     let mut to_check: Vec<(usize, usize)> = Vec::new();
     for (row_idx, row) in grid.iter().enumerate() {
         for (col_idx, cell) in row.iter().enumerate() {
-            if cell == &b'@' {
-                increment_neighbours(&mut neighbours_count, row_idx, col_idx);
-                to_check.push((row_idx, col_idx));
+            if cell == &b'.' {
+                continue;
             }
+
+            increment_neighbours(&mut neighbours_count, row_idx, col_idx);
+            to_check.push((row_idx, col_idx));
         }
     }
 
@@ -90,13 +92,20 @@ pub fn part2(input: &str) -> usize {
 
         // decrement neighbours and check if they can be removed
         for (n_row, n_col) in iter_neighbours(row, col) {
-            if let Some(row) = grid.get(n_row)
-                && let Some(cell) = row.get(n_col)
-                && cell == &b'@'
-            {
-                neighbours_count[n_row][n_col] = neighbours_count[n_row][n_col].saturating_sub(1);
-                to_check.push((n_row, n_col));
+            let Some(row) = grid.get(n_row) else {
+                continue;
+            };
+
+            let Some(cell) = row.get(n_col) else {
+                continue;
+            };
+
+            if cell == &b'.' {
+                continue;
             }
+
+            neighbours_count[n_row][n_col] = neighbours_count[n_row][n_col].saturating_sub(1);
+            to_check.push((n_row, n_col));
         }
     }
 
