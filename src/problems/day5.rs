@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-
+#[allow(unused)]
 pub fn part1(input: &str) -> u64 {
     let (ranges, ids) = input.split_once("\n\n").unwrap();
     let ranges = ranges
@@ -63,6 +62,7 @@ pub fn part2(input: &str) -> u64 {
             start: r1.start.min(r2.start),
             end: r1.end.max(r2.end),
         };
+
         ranges.push(r3);
     }
 
