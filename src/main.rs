@@ -3,11 +3,11 @@
 mod problems;
 
 fn main() {
-    let input = include_str!("../input/day5.txt");
+    let input = include_str!("../input/day6.txt");
 
     let start = std::time::Instant::now();
 
-    let result = problems::day5::part2(input);
+    let result = problems::day6::part1(input);
 
     let duration = start.elapsed();
 
