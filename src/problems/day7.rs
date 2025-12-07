@@ -1,35 +1,28 @@
-use std::{
-    collections::{HashMap, HashSet},
-    hash::BuildHasherDefault,
-};
-
-use fxhash::{FxBuildHasher, FxHasher};
-
 fn propagate_beam(
     mut row: usize,
     col: usize,
-    max_row: usize,
-    splits: &HashSet<(usize, usize), BuildHasherDefault<FxHasher>>,
-    visited: &mut HashSet<(usize, usize), BuildHasherDefault<FxHasher>>,
+    row_count: usize,
+    splits: &Vec<Vec<bool>>,
+    visited: &mut Vec<Vec<bool>>,
 ) -> usize {
     loop {
         // skip visited cells
-        if visited.contains(&(row, col)) {
+        if visited[row][col] {
             return 0;
         }
 
         // mark cell as visited
-        visited.insert((row, col));
+        visited[row][col] = true;
 
-        if row == max_row {
+        if row == row_count - 1 {
             return 0;
         }
 
-        if splits.contains(&(row, col)) {
+        if splits[row][col] {
             // split
             return 1
-                + propagate_beam(row, col + 1, max_row, splits, visited)
-                + propagate_beam(row, col - 1, max_row, splits, visited);
+                + propagate_beam(row, col + 1, row_count, splits, visited)
+                + propagate_beam(row, col - 1, row_count, splits, visited);
         }
 
         row += 1;
@@ -39,76 +32,78 @@ fn propagate_beam(
 #[allow(unused)]
 pub fn part1(input: &str) -> usize {
     let grid: Vec<&[u8]> = input.lines().map(str::as_bytes).collect();
-    let max_row = grid.len() - 1;
+    let rows = grid.len();
+    let cols = grid[0].len();
 
     let start = grid[0].iter().position(|&c| c == b'S').unwrap();
 
-    let mut splits = HashSet::with_capacity_and_hasher(2000, FxBuildHasher::new());
+    let mut splits = vec![vec![false; cols]; rows];
 
     for (row_idx, row) in grid.iter().enumerate() {
         for (col_idx, cell) in row.iter().enumerate() {
             if cell == &b'^' {
-                splits.insert((row_idx, col_idx));
+                splits[row_idx][col_idx] = true;
             }
         }
     }
 
-    let mut visited = HashSet::with_capacity_and_hasher(10000, FxBuildHasher::new());
+    let mut visited = vec![vec![false; cols]; rows];
 
-    propagate_beam(0, start, max_row, &splits, &mut visited)
+    propagate_beam(0, start, rows, &splits, &mut visited)
 }
 
 #[allow(unused)]
 pub fn part2(input: &str) -> usize {
     let grid: Vec<&[u8]> = input.lines().map(str::as_bytes).collect();
-    let max_row = grid.len() - 1;
+    let rows = grid.len();
+    let cols = grid[0].len();
 
     let start = grid[0].iter().position(|&c| c == b'S').unwrap();
 
-    let mut splits = HashSet::with_capacity_and_hasher(2000, FxBuildHasher::new());
+    let mut splits = vec![vec![false; cols]; rows];
 
     for (row_idx, row) in grid.iter().enumerate() {
         for (col_idx, cell) in row.iter().enumerate() {
             if cell == &b'^' {
-                splits.insert((row_idx, col_idx));
+                splits[row_idx][col_idx] = true;
             }
         }
     }
 
-    let mut visited = HashMap::with_capacity_and_hasher(10000, FxBuildHasher::new());
+    let mut visited = vec![vec![0usize; cols]; rows];
 
-    count_timelines(0, start, max_row, &splits, &mut visited)
+    count_timelines(0, start, rows, &splits, &mut visited)
 }
 
 fn count_timelines(
     row: usize,
     col: usize,
-    max_row: usize,
-    splits: &HashSet<(usize, usize), BuildHasherDefault<FxHasher>>,
-    visited: &mut HashMap<(usize, usize), usize, BuildHasherDefault<FxHasher>>,
+    row_count: usize,
+    splits: &Vec<Vec<bool>>,
+    visited: &mut Vec<Vec<usize>>,
 ) -> usize {
     // skip visited cells
-    if visited.contains_key(&(row, col)) {
-        return visited[&(row, col)];
+    if visited[row][col] != 0 {
+        return visited[row][col];
     }
 
-    if row == max_row {
+    if row == row_count - 1 {
         // mark cell as visited
-        visited.insert((row, col), 1);
+        visited[row][col] = 1;
         return 1;
     }
 
     // propagate down if not at splitter
-    if !splits.contains(&(row, col)) {
+    if !splits[row][col] {
         // mark cell as visited
-        let timelines = count_timelines(row + 1, col, max_row, splits, visited);
-        visited.insert((row, col), timelines);
+        let timelines = count_timelines(row + 1, col, row_count, splits, visited);
+        visited[row][col] = timelines;
         return timelines;
     }
 
     // split
-    let timelines = count_timelines(row, col + 1, max_row, splits, visited)
-        + count_timelines(row, col - 1, max_row, splits, visited);
-    visited.insert((row, col), timelines);
+    let timelines = count_timelines(row, col + 1, row_count, splits, visited)
+        + count_timelines(row, col - 1, row_count, splits, visited);
+    visited[row][col] = timelines;
     timelines
 }
