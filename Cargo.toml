@@ -9,6 +9,4 @@ fxhash = "0.2.1"
 [profile.release]
 target-cpu = "native"
 opt-level = 3
-debug = false
 codegen-units = 1
-panic = "abort"

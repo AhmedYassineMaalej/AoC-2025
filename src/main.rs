@@ -7,7 +7,7 @@ fn main() {
 
     let start = std::time::Instant::now();
 
-    let result = problems::day7::part2(input);
+    let result = problems::day7::part1(input);
 
     let duration = start.elapsed();
 
