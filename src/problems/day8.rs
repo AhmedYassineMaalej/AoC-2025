@@ -1,15 +1,15 @@
 #[derive(Clone, Debug)]
-struct Box {
+struct Position {
     x: u64,
     y: u64,
     z: u64,
 }
 
-impl From<&str> for Box {
+impl From<&str> for Position {
     fn from(value: &str) -> Self {
         let mut coords = value.split(',').map(|coord| coord.parse().unwrap());
 
-        Box {
+        Position {
             x: coords.next().unwrap(),
             y: coords.next().unwrap(),
             z: coords.next().unwrap(),
@@ -17,8 +17,8 @@ impl From<&str> for Box {
     }
 }
 
-impl Box {
-    fn distance(&self, other: &Box) -> u64 {
+impl Position {
+    fn distance(&self, other: &Position) -> u64 {
         self.x.abs_diff(other.x).pow(2)
             + self.y.abs_diff(other.y).pow(2)
             + self.z.abs_diff(other.z).pow(2)
@@ -27,85 +27,122 @@ impl Box {
 
 #[allow(unused)]
 pub fn part1(input: &str) -> usize {
-    let now = std::time::Instant::now();
-    let boxes: Vec<Box> = input.lines().map(Box::from).collect();
+    let boxes: Vec<Position> = input.lines().map(Position::from).collect();
 
-    let mut pairs: Vec<(usize, usize)> = Vec::with_capacity(500_000);
+    // (start_idx, end_idx, distance)
+    let mut pairs: Vec<(usize, usize, u64)> = get_closest_pairs::<1000>(&boxes);
 
-    for i in 0..boxes.len() {
-        for j in (i + 1)..boxes.len() {
-            pairs.push((i, j));
-        }
+    let mut circuits = Dsu::new(1000);
+
+    for (i, j, _) in pairs {
+        circuits.add_pair(i, j);
     }
 
-    pairs.sort_unstable_by_key(|(i, j)| boxes[*i].distance(&boxes[*j]));
+    circuits.nodes.sort_by_key(|node| node.size);
 
-    let mut circuits: Vec<Vec<usize>> = Vec::with_capacity(500);
-
-    for (i, j) in pairs.iter().take(1000) {
-        let i_circuit = circuits.iter().position(|circuit| circuit.contains(i));
-        let j_circuit = circuits.iter().position(|circuit| circuit.contains(j));
-
-        match (i_circuit, j_circuit) {
-            (None, None) => circuits.push(vec![*i, *j]),
-            (None, Some(j_circuit_idx)) => circuits[j_circuit_idx].push(*i),
-            (Some(i_circuit_idx), None) => circuits[i_circuit_idx].push(*j),
-            (Some(i_circuit_idx), Some(j_circuit_idx)) => {
-                if i_circuit_idx == j_circuit_idx {
-                    continue;
-                }
-
-                let j_circuit: Vec<_> = circuits[j_circuit_idx].drain(..).collect();
-                circuits[i_circuit_idx].extend(j_circuit);
-            }
-        }
-    }
-
-    circuits.sort_unstable_by_key(Vec::len);
-    circuits.reverse();
-
-    circuits.iter().take(3).map(Vec::len).product()
+    circuits
+        .nodes
+        .iter()
+        .rev()
+        .take(3)
+        .map(|circuit| circuit.size)
+        .product()
 }
 
 #[allow(unused)]
 pub fn part2(input: &str) -> u64 {
-    let boxes: Vec<Box> = input.lines().map(Box::from).collect();
+    let now = std::time::Instant::now();
+    let boxes: Vec<Position> = input.lines().map(Position::from).collect();
 
-    let mut pairs: Vec<(usize, usize)> = Vec::with_capacity(boxes.len() * (boxes.len() - 1) / 2);
+    // (start_idx, end_idx, distance)
+    let mut pairs: Vec<(usize, usize, u64)> = get_closest_pairs::<5_000>(&boxes);
 
-    for i in 0..boxes.len() {
-        for j in (i + 1)..boxes.len() {
-            pairs.push((i, j));
+    let mut circuits = Dsu::new(1000);
+
+    for (i, j, _) in pairs {
+        if circuits.add_pair(i, j) == 1000 {
+            return boxes[i].x * boxes[j].x;
         }
     }
 
-    pairs.sort_unstable_by_key(|(i, j)| boxes[*i].distance(&boxes[*j]));
+    unreachable!()
+}
 
-    let mut circuits: Vec<Vec<usize>> = Vec::new();
-    let mut res = 0;
+struct Node {
+    parent: usize,
+    size: usize,
+}
 
-    for (i, j) in &pairs {
-        let i_circuit = circuits.iter().position(|circuit| circuit.contains(i));
-        let j_circuit = circuits.iter().position(|circuit| circuit.contains(j));
+struct Dsu {
+    nodes: Vec<Node>,
+}
 
-        match (i_circuit, j_circuit) {
-            (None, None) => circuits.push(vec![*i, *j]),
-            (None, Some(j_circuit_idx)) => circuits[j_circuit_idx].push(*i),
-            (Some(i_circuit_idx), None) => circuits[i_circuit_idx].push(*j),
-            (Some(i_circuit_idx), Some(j_circuit_idx)) => {
-                if i_circuit_idx == j_circuit_idx {
-                    continue;
-                }
+impl Dsu {
+    fn new(len: usize) -> Self {
+        Self {
+            nodes: (0..len).map(|parent| Node { parent, size: 1 }).collect(),
+        }
+    }
 
-                let j_circuit: Vec<_> = circuits[j_circuit_idx].drain(..).collect();
-                circuits[i_circuit_idx].extend(j_circuit);
+    fn parent(&mut self, mut x: usize) -> usize {
+        loop {
+            // get parent
+            let parent = self.nodes[x].parent;
+            // reached top most parent
+            if parent == x {
+                break parent;
             }
-        }
-
-        if circuits.iter().map(Vec::len).max() == Some(1000) {
-            res = boxes[*i].x * boxes[*j].x;
+            // update parent
+            self.nodes[x].parent = self.nodes[parent].parent;
+            // update x
+            x = parent;
         }
     }
 
-    res
+    fn add_pair(&mut self, u: usize, v: usize) -> usize {
+        let (mut pu, mut pv) = (self.parent(u), self.parent(v));
+
+        // same parent => same subset
+        if pu == pv {
+            return self.nodes[pu].size;
+        }
+
+        // make sure pu is bigger than pv
+        if self.nodes[pu].size < self.nodes[pv].size {
+            std::mem::swap(&mut pu, &mut pv);
+        }
+
+        self.nodes[pv].parent = pu;
+        self.nodes[pu].size += self.nodes[pv].size;
+        self.nodes[pu].size
+    }
+}
+
+fn get_closest_pairs<const N: usize>(boxes: &[Position]) -> Vec<(usize, usize, u64)> {
+    // (start_idx, end_idx, distance)
+    let mut pairs: Vec<(usize, usize, u64)> = Vec::with_capacity(N);
+
+    let mut iter = (0..boxes.len()).flat_map(|i| (i + 1..boxes.len()).map(move |j| (i, j)));
+
+    for _ in 0..N {
+        let (i, j) = iter.next().unwrap();
+        let d = boxes[i].distance(&boxes[j]);
+        pairs.push((i, j, d));
+    }
+
+    pairs.sort_unstable_by_key(|(_, _, d)| *d);
+
+    for (i, j) in iter {
+        let d = boxes[i].distance(&boxes[j]);
+
+        if d > pairs.last().unwrap().2 {
+            continue;
+        }
+
+        pairs.pop();
+        let insert_idx = pairs.partition_point(|(_, _, dist)| dist < &d);
+        pairs.insert(insert_idx, (i, j, d));
+    }
+
+    pairs
 }
